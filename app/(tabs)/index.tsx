@@ -1,70 +1,92 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  FlatList,
+  Text,
+  View,
+  Button,
+  SafeAreaView,
+  TouchableOpacity,
+} from "react-native";
+import axios from "axios";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { NavigationContainer } from "@react-navigation/native";
+import PostDetailsScreen from "../postDetailsScreen";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-
-export default function HomeScreen() {
+const Stack = createNativeStackNavigator();
+export default function App() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <GestureHandlerRootView>
+      <Stack.Navigator>
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="PostDetailsScreen" component={PostDetailsScreen} />
+      </Stack.Navigator>
+    </GestureHandlerRootView>
   );
 }
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+const PostItem = ({ item, onTap }) => {
+  return useMemo(
+    () => (
+      <TouchableOpacity
+        onPress={() => {
+          onTap(item.id);
+        }}
+        style={{ marginBottom: 20 }}
+      >
+        <Text style={{ fontSize: 18 }}>ID: {item.id}</Text>
+        <Text style={{ fontSize: 16 }}>Title: {item.title}</Text>
+      </TouchableOpacity>
+    ),
+    [item]
+  );
+};
+
+const HomeScreen = ({ navigation }) => {
+  const [posts, setPosts] = useState([]);
+  const [page, setPage] = useState(1);
+  const perPage = 10;
+
+  const onTap = (id: any) => {
+    navigation.navigate("PostDetailsScreen", { id });
+  };
+
+  useEffect(() => {
+    axios
+      .get(
+        `https://jsonplaceholder.typicode.com/posts?_page=${page}&_limit=${perPage}`
+      )
+      .then((response) => {
+        setPosts([...posts,...response.data]);
+      })
+      .catch((error) => {
+        console.log("Error fetching data: ", error);
+      });
+  }, [page]);
+
+  const nextPage = () => {
+    setPage(page + 1);
+  };
+
+
+  return (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#fff",
+      }}
+    >
+      <Text style={{ fontSize: 24, fontWeight: "bold", marginBottom: 10 }}>
+        Posts:
+      </Text>
+      <FlatList
+        data={posts}
+        onEndReached={nextPage}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => <PostItem item={item} onTap={onTap} />}
+      />
+    </SafeAreaView>
+  );
+};
